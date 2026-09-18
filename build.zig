@@ -4,6 +4,7 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const bundle = b.option(bool, "bundle", "Bundle SQLite") orelse false;
+    const fts5 = b.option(bool, "fts5", "Enable FTS5 full-text search (bundled SQLite only)") orelse false;
 
     const translate_c = b.addTranslateC(.{
         .root_source_file = b.path("src/c.h"),
@@ -29,7 +30,11 @@ pub fn build(b: *std.Build) !void {
     if (bundle) {
         if (b.lazyDependency("sqlite_source", .{})) |src| {
             lib.addIncludePath(src.path("."));
-            lib.addCSourceFile(.{ .file = src.path("sqlite3.c"), .flags = &.{"-std=c99"} });
+            const flags: []const []const u8 = if (fts5)
+                &.{ "-std=c99", "-DSQLITE_ENABLE_FTS5" }
+            else
+                &.{"-std=c99"};
+            lib.addCSourceFile(.{ .file = src.path("sqlite3.c"), .flags = flags });
         }
     } else {
         // lib.linkSystemLibrary("sqlite3", .{});
